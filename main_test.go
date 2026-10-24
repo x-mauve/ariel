@@ -7,6 +7,8 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 	"testing"
@@ -276,6 +278,46 @@ func TestPinMessage(t *testing.T) {
 	p := api.callsTo("pinChatMessage")[0].Params
 	if p["chat_id"] != -2.0 || p["message_id"] != 7.0 || p["disable_notification"] != true {
 		t.Errorf("got %v", p)
+	}
+}
+
+func TestSendDocument(t *testing.T) {
+	srv, api := newTestServer(t)
+
+	path := filepath.Join(t.TempDir(), "build.log")
+	if err := os.WriteFile(path, []byte("ok"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	in := map[string]any{"path": path, "caption": "build", "level": "warn", "silent": true}
+	out, err := argontest.Call[sendDocumentOut](t, srv, "sendDocument", in)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if out.MessageID == 0 {
+		t.Error("got zero message ID")
+	}
+
+	c := api.callsTo("sendDocument")[0]
+	if c.Files["document"] != "ok" || c.Params["caption"] != "⚠️ build" ||
+		c.Params["chat_id"] != "1" || c.Params["disable_notification"] != "true" {
+		t.Errorf("got %+v", c)
+	}
+}
+
+func TestSendDocumentContent(t *testing.T) {
+	srv, api := newTestServer(t)
+
+	if _, err := argontest.Call[sendDocumentOut](t, srv, "sendDocument", map[string]any{"content": "report"}); err != nil {
+		t.Fatal(err)
+	}
+	if got := api.callsTo("sendDocument")[0].Files["document"]; got != "report" {
+		t.Errorf("got %q", got)
+	}
+
+	both := map[string]any{"content": "report", "path": "x"}
+	if _, err := argontest.Call[sendDocumentOut](t, srv, "sendDocument", both); err == nil {
+		t.Error("want error when both path and content are set")
 	}
 }
 

@@ -1,9 +1,13 @@
 package main
 
 import (
+	"cmp"
 	"context"
 	"encoding/json"
 	"fmt"
+	"os"
+	"path/filepath"
+	"time"
 
 	"go.xchunk.org/argon"
 )
@@ -42,6 +46,55 @@ type pinMessageIn struct {
 	Chat      string `json:"chat,omitempty" jsonschema:"Chat name from listChats; the default chat if empty"`
 	MessageID int64  `json:"message_id" jsonschema:"ID of the message, as returned by sendMessage"`
 	Silent    bool   `json:"silent,omitempty" jsonschema:"Pin without notifying chat members"`
+}
+
+// sendDocumentIn is the input schema of the sendDocument tool.
+type sendDocumentIn struct {
+	Chat      string `json:"chat,omitempty" jsonschema:"Chat name from listChats; the default chat if empty"`
+	Path      string `json:"path,omitempty" jsonschema:"Path to a local file to send; set either path or content"`
+	Content   string `json:"content,omitempty" jsonschema:"Text content to send as a file, e.g. a log or a report; set either path or content"`
+	Filename  string `json:"filename,omitempty" jsonschema:"File name shown in the chat; defaults to the base name of path, or report.txt for content"`
+	Caption   string `json:"caption,omitempty" jsonschema:"Caption under the file, at most 1024 characters"`
+	ParseMode string `json:"parse_mode,omitempty" jsonschema:"Caption formatting: MarkdownV2 or HTML; plain text if empty"`
+	Silent    bool   `json:"silent,omitempty" jsonschema:"Deliver without sound, for non-urgent notifications"`
+	Level     string `json:"level,omitempty" jsonschema:"Severity: info, warn or error; adds an emoji prefix to the caption"`
+}
+
+// sendDocumentOut is the output of the sendDocument tool.
+type sendDocumentOut struct {
+	MessageID int64 `json:"message_id" jsonschema:"ID of the sent message"`
+}
+
+// documentFile returns the name and contents of the file described by in.
+func documentFile(in sendDocumentIn) (string, []byte, error) {
+	switch {
+	case (in.Path == "") == (in.Content == ""):
+		return "", nil, fmt.Errorf("set exactly one of path and content")
+	case in.Content != "":
+		name := cmp.Or(in.Filename, "report.txt")
+		if len(in.Content) > maxUploadSize {
+			return "", nil, fmt.Errorf("content exceeds the %d MiB upload limit", maxUploadSize>>20)
+		}
+		return name, []byte(in.Content), nil
+	}
+
+	info, err := os.Stat(in.Path)
+	if err != nil {
+		return "", nil, err
+	}
+	if !info.Mode().IsRegular() {
+		return "", nil, fmt.Errorf("%s is not a regular file", in.Path)
+	}
+	if info.Size() > maxUploadSize {
+		return "", nil, fmt.Errorf("%s exceeds the %d MiB upload limit", in.Path, maxUploadSize>>20)
+	}
+
+	data, err := os.ReadFile(in.Path)
+	if err != nil {
+		return "", nil, err
+	}
+
+	return cmp.Or(in.Filename, filepath.Base(in.Path)), data, nil
 }
 
 // chatInfo describes a chat in the listChats output.
@@ -207,5 +260,47 @@ func registerTools(srv *argon.Server, b *bot) {
 		},
 		argon.Idempotent(),
 		argon.OpenWorld(),
+	)
+
+	argon.Tool(srv,
+		"sendDocument",
+		"Send a local file or text content as a document, e.g. a log or a report",
+		func(ctx context.Context, in sendDocumentIn) (sendDocumentOut, error) {
+			chatID, err := b.chatID(in.Chat)
+			if err != nil {
+				return sendDocumentOut{}, err
+			}
+			if err := checkParseMode(in.ParseMode); err != nil {
+				return sendDocumentOut{}, err
+			}
+			caption, err := withLevel(in.Level, in.Caption)
+			if err != nil {
+				return sendDocumentOut{}, err
+			}
+			if n := utf16Len(caption); n > maxCaptionLen {
+				return sendDocumentOut{}, fmt.Errorf("caption is %d characters long, the limit is %d", n, maxCaptionLen)
+			}
+
+			name, data, err := documentFile(in)
+			if err != nil {
+				return sendDocumentOut{}, err
+			}
+
+			req := sendDocumentReq{
+				ChatID:              chatID,
+				Caption:             caption,
+				ParseMode:           in.ParseMode,
+				DisableNotification: in.Silent,
+			}
+			msg, err := b.upload[message](ctx, req, "document", name, data)
+			if err != nil {
+				return sendDocumentOut{}, fmt.Errorf("send document: %w", err)
+			}
+
+			return sendDocumentOut{MessageID: msg.MessageID}, nil
+		},
+		argon.OpenWorld(),
+		// Uploads of large files with retries take longer than the default limit.
+		argon.ToolTimeout(5*time.Minute),
 	)
 }

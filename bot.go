@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -57,9 +58,24 @@ func (b *bot) send[Resp any](ctx context.Context, req lithium.Method) (Resp, err
 	})
 }
 
+// upload sends req as multipart/form-data with data attached as file field and
+// decodes the result into Resp. Like send, it retries transient failures;
+// each attempt is bounded by uploadTimeout.
+func (b *bot) upload[Resp any](ctx context.Context, req lithium.Method, field, name string, data []byte) (Resp, error) {
+	return retry(ctx, func(ctx context.Context) (Resp, error) {
+		ctx, cancel := context.WithTimeout(ctx, uploadTimeout)
+		defer cancel()
+
+		file := lithium.File{Field: field, Name: name, Reader: bytes.NewReader(data)}
+		return b.client.Upload[Resp](ctx, req, file)
+	})
+}
+
 const (
 	// requestTimeout bounds a single Bot API request.
 	requestTimeout = 10 * time.Second
+	// uploadTimeout bounds a single Bot API request that uploads a file.
+	uploadTimeout = time.Minute
 	// maxAttempts is how many times a request is tried before giving up.
 	maxAttempts = 3
 )
@@ -156,6 +172,20 @@ func (pinChatMessageReq) Method() string {
 	return "pinChatMessage"
 }
 
+// sendDocumentReq is the payload of the Bot API sendDocument method. The
+// document itself is attached as a file.
+type sendDocumentReq struct {
+	ChatID              int64  `json:"chat_id"`
+	Caption             string `json:"caption,omitempty"`
+	ParseMode           string `json:"parse_mode,omitempty"`
+	DisableNotification bool   `json:"disable_notification,omitempty"`
+}
+
+// Method returns the Bot API method name for the request.
+func (sendDocumentReq) Method() string {
+	return "sendDocument"
+}
+
 // getMeReq is the payload of the Bot API getMe method.
 type getMeReq struct{}
 
@@ -194,6 +224,12 @@ func checkParseMode(mode string) error {
 		return fmt.Errorf("unsupported parse mode %q, want MarkdownV2 or HTML", mode)
 	}
 }
+
+// maxCaptionLen is the Bot API limit on caption length, in UTF-16 code units.
+const maxCaptionLen = 1024
+
+// maxUploadSize is the Bot API limit on the size of an uploaded file.
+const maxUploadSize = 50 << 20
 
 // maxTextLen is the Bot API limit on message text length, in UTF-16 code units.
 const maxTextLen = 4096
