@@ -9,8 +9,10 @@ import (
 
 // sendMessageIn is the input schema of the sendMessage tool.
 type sendMessageIn struct {
-	Chat string `json:"chat,omitempty" jsonschema:"Chat name from listChats; the default chat if empty"`
-	Text string `json:"text" jsonschema:"Message text"`
+	Chat      string `json:"chat,omitempty" jsonschema:"Chat name from listChats; the default chat if empty"`
+	Text      string `json:"text" jsonschema:"Message text"`
+	ParseMode string `json:"parse_mode,omitempty" jsonschema:"Text formatting: MarkdownV2 or HTML; plain text if empty"`
+	Silent    bool   `json:"silent,omitempty" jsonschema:"Deliver without sound, for non-urgent notifications"`
 }
 
 // chatInfo describes a chat in the listChats output.
@@ -48,8 +50,16 @@ func registerTools(srv *argon.Server, b *bot) {
 			if err != nil {
 				return "", err
 			}
+			if err := checkParseMode(in.ParseMode); err != nil {
+				return "", err
+			}
 
-			req := sendMessageReq{ChatID: chatID, Text: in.Text}
+			req := sendMessageReq{
+				ChatID:              chatID,
+				Text:                in.Text,
+				ParseMode:           in.ParseMode,
+				DisableNotification: in.Silent,
+			}
 			if _, err := b.send[struct{}](ctx, req); err != nil {
 				return "", fmt.Errorf("send message: %w", err)
 			}

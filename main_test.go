@@ -146,6 +146,25 @@ func TestSendMessage(t *testing.T) {
 	}
 }
 
+func TestSendMessageFormatting(t *testing.T) {
+	srv, api := newTestServer(t)
+
+	in := map[string]any{"text": "*hi*", "parse_mode": "MarkdownV2", "silent": true}
+	if _, err := argontest.Call[string](t, srv, "sendMessage", in); err != nil {
+		t.Fatal(err)
+	}
+
+	p := api.callsTo("sendMessage")[0].Params
+	if p["parse_mode"] != "MarkdownV2" || p["disable_notification"] != true {
+		t.Errorf("got %v", p)
+	}
+
+	in["parse_mode"] = "Markdown"
+	if _, err := argontest.Call[string](t, srv, "sendMessage", in); err == nil {
+		t.Error("want error for unsupported parse mode")
+	}
+}
+
 func TestSendMessageUnknownChat(t *testing.T) {
 	srv, _ := newTestServer(t)
 

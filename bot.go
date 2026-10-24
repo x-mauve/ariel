@@ -107,8 +107,10 @@ func retryDelay(err error, attempt int) (time.Duration, bool) {
 
 // sendMessageReq is the payload of the Telegram Bot API sendMessage method.
 type sendMessageReq struct {
-	ChatID int64  `json:"chat_id"`
-	Text   string `json:"text"`
+	ChatID              int64  `json:"chat_id"`
+	Text                string `json:"text"`
+	ParseMode           string `json:"parse_mode,omitempty"`
+	DisableNotification bool   `json:"disable_notification,omitempty"`
 }
 
 // Method returns the Bot API method name for the request.
@@ -137,4 +139,15 @@ func (b *bot) check(ctx context.Context) (string, error) {
 	}
 
 	return me.Username, nil
+}
+
+// checkParseMode reports an error if mode is not a Bot API parse mode.
+// An empty mode sends the text as is.
+func checkParseMode(mode string) error {
+	switch mode {
+	case "", "MarkdownV2", "HTML":
+		return nil
+	default:
+		return fmt.Errorf("unsupported parse mode %q, want MarkdownV2 or HTML", mode)
+	}
 }
