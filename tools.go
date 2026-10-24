@@ -10,7 +10,7 @@ import (
 // sendMessageIn is the input schema of the sendMessage tool.
 type sendMessageIn struct {
 	Chat      string `json:"chat,omitempty" jsonschema:"Chat name from listChats; the default chat if empty"`
-	Text      string `json:"text" jsonschema:"Message text"`
+	Text      string `json:"text" jsonschema:"Message text; text over 4096 characters is split into several messages"`
 	ParseMode string `json:"parse_mode,omitempty" jsonschema:"Text formatting: MarkdownV2 or HTML; plain text if empty"`
 	Silent    bool   `json:"silent,omitempty" jsonschema:"Deliver without sound, for non-urgent notifications"`
 	Level     string `json:"level,omitempty" jsonschema:"Severity: info, warn or error; adds an emoji prefix"`
@@ -80,17 +80,20 @@ func registerTools(srv *argon.Server, b *bot) {
 				return "", err
 			}
 
-			req := sendMessageReq{
-				ChatID:              chatID,
-				Text:                text,
-				ParseMode:           in.ParseMode,
-				DisableNotification: in.Silent,
-			}
-			if _, err := b.send[struct{}](ctx, req); err != nil {
-				return "", fmt.Errorf("send message: %w", err)
+			chunks := splitText(text, maxTextLen)
+			for i, chunk := range chunks {
+				req := sendMessageReq{
+					ChatID:              chatID,
+					Text:                chunk,
+					ParseMode:           in.ParseMode,
+					DisableNotification: in.Silent,
+				}
+				if _, err := b.send[struct{}](ctx, req); err != nil {
+					return "", fmt.Errorf("send message part %d of %d: %w", i+1, len(chunks), err)
+				}
 			}
 
-			return "Sent!", nil
+			return fmt.Sprintf("Sent %d message(s)", len(chunks)), nil
 		},
 		argon.OpenWorld(),
 	)

@@ -182,6 +182,44 @@ func TestSendMessageLevel(t *testing.T) {
 	}
 }
 
+func TestSendMessageSplitsLongText(t *testing.T) {
+	srv, api := newTestServer(t)
+
+	text := strings.Repeat("a", 4000) + "\n" + strings.Repeat("b", 200)
+	if _, err := argontest.Call[string](t, srv, "sendMessage", map[string]any{"text": text}); err != nil {
+		t.Fatal(err)
+	}
+
+	calls := api.callsTo("sendMessage")
+	if len(calls) != 2 {
+		t.Fatalf("got %d messages, want 2", len(calls))
+	}
+	if got := calls[0].Params["text"].(string) + calls[1].Params["text"].(string); got != text {
+		t.Error("chunks do not add up to the original text")
+	}
+}
+
+func TestSplitText(t *testing.T) {
+	tests := []struct {
+		text  string
+		limit int
+		want  []string
+	}{
+		{"short", 10, []string{"short"}},
+		{"one two three", 8, []string{"one two ", "three"}},
+		{"line1\nline two", 12, []string{"line1\n", "line two"}},
+		{"abcdefgh", 3, []string{"abc", "def", "gh"}},
+		// 😀 takes two UTF-16 code units, so only two fit into four.
+		{"😀😀😀", 4, []string{"😀😀", "😀"}},
+	}
+	for _, tt := range tests {
+		got := splitText(tt.text, tt.limit)
+		if strings.Join(got, "|") != strings.Join(tt.want, "|") {
+			t.Errorf("splitText(%q, %d) = %q, want %q", tt.text, tt.limit, got, tt.want)
+		}
+	}
+}
+
 func TestSendMessageUnknownChat(t *testing.T) {
 	srv, _ := newTestServer(t)
 

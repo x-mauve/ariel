@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"net"
 	"time"
+	"unicode/utf16"
+	"unicode/utf8"
 
 	"go.xchunk.org/lithium"
 )
@@ -150,4 +152,49 @@ func checkParseMode(mode string) error {
 	default:
 		return fmt.Errorf("unsupported parse mode %q, want MarkdownV2 or HTML", mode)
 	}
+}
+
+// maxTextLen is the Bot API limit on message text length, in UTF-16 code units.
+const maxTextLen = 4096
+
+// splitText splits text into chunks of at most limit UTF-16 code units each.
+// It prefers to break after a newline, then after a space, and cuts mid-word
+// only when a chunk has neither.
+func splitText(text string, limit int) []string {
+	var chunks []string
+	for utf16Len(text) > limit {
+		cut, lastNewline, lastSpace, width := 0, 0, 0, 0
+		for i, r := range text {
+			if width += utf16.RuneLen(r); width > limit {
+				break
+			}
+			cut = i + utf8.RuneLen(r)
+			switch r {
+			case '\n':
+				lastNewline = cut
+			case ' ':
+				lastSpace = cut
+			}
+		}
+
+		if lastNewline > 0 {
+			cut = lastNewline
+		} else if lastSpace > 0 {
+			cut = lastSpace
+		}
+		chunks = append(chunks, text[:cut])
+		text = text[cut:]
+	}
+
+	return append(chunks, text)
+}
+
+// utf16Len returns the length of s in UTF-16 code units, as Telegram counts it.
+func utf16Len(s string) int {
+	n := 0
+	for _, r := range s {
+		n += utf16.RuneLen(r)
+	}
+
+	return n
 }
