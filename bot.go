@@ -25,8 +25,8 @@ type bot struct {
 
 // newBot creates a bot that talks to the Bot API with token and delivers
 // messages to chats. chats must not be empty; its first entry is the default.
-func newBot(token string, chats []chat) *bot {
-	return &bot{client: lithium.New(token), chats: chats}
+func newBot(token string, chats []chat, opts ...lithium.Option) *bot {
+	return &bot{client: lithium.New(token, opts...), chats: chats}
 }
 
 // chatID resolves a chat name to its ID. An empty name selects the default chat.
