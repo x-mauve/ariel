@@ -37,6 +37,13 @@ type messageRefIn struct {
 	MessageID int64  `json:"message_id" jsonschema:"ID of the message, as returned by sendMessage"`
 }
 
+// pinMessageIn is the input schema of the pinMessage tool.
+type pinMessageIn struct {
+	Chat      string `json:"chat,omitempty" jsonschema:"Chat name from listChats; the default chat if empty"`
+	MessageID int64  `json:"message_id" jsonschema:"ID of the message, as returned by sendMessage"`
+	Silent    bool   `json:"silent,omitempty" jsonschema:"Pin without notifying chat members"`
+}
+
 // chatInfo describes a chat in the listChats output.
 type chatInfo struct {
 	chat
@@ -175,6 +182,30 @@ func registerTools(srv *argon.Server, b *bot) {
 			return "Deleted", nil
 		},
 		argon.Destructive(),
+		argon.OpenWorld(),
+	)
+
+	argon.Tool(srv,
+		"pinMessage",
+		"Pin a sent message in its chat, for the most important notifications",
+		func(ctx context.Context, in pinMessageIn) (string, error) {
+			chatID, err := b.chatID(in.Chat)
+			if err != nil {
+				return "", err
+			}
+
+			req := pinChatMessageReq{
+				ChatID:              chatID,
+				MessageID:           in.MessageID,
+				DisableNotification: in.Silent,
+			}
+			if _, err := b.send[bool](ctx, req); err != nil {
+				return "", fmt.Errorf("pin message: %w", err)
+			}
+
+			return "Pinned", nil
+		},
+		argon.Idempotent(),
 		argon.OpenWorld(),
 	)
 }
