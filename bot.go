@@ -10,16 +10,38 @@ import (
 	"go.xchunk.org/lithium"
 )
 
+// chat is a named destination for messages.
+type chat struct {
+	Name string `json:"name"`
+	ID   int64  `json:"id"`
+}
+
 // bot sends Bot API requests on behalf of the configured Telegram bot.
 type bot struct {
 	client *lithium.Client
-	chatID int64
+	// chats lists the known destinations; the first one is the default.
+	chats []chat
 }
 
 // newBot creates a bot that talks to the Bot API with token and delivers
-// messages to chatID.
-func newBot(token string, chatID int64) *bot {
-	return &bot{client: lithium.New(token), chatID: chatID}
+// messages to chats. chats must not be empty; its first entry is the default.
+func newBot(token string, chats []chat) *bot {
+	return &bot{client: lithium.New(token), chats: chats}
+}
+
+// chatID resolves a chat name to its ID. An empty name selects the default chat.
+func (b *bot) chatID(name string) (int64, error) {
+	if name == "" {
+		return b.chats[0].ID, nil
+	}
+
+	for _, c := range b.chats {
+		if c.Name == name {
+			return c.ID, nil
+		}
+	}
+
+	return 0, fmt.Errorf("unknown chat %q, call listChats for the available ones", name)
 }
 
 // send sends req and decodes the result into Resp. Each attempt is bounded by

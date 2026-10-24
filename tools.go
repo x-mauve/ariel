@@ -9,16 +9,47 @@ import (
 
 // sendMessageIn is the input schema of the sendMessage tool.
 type sendMessageIn struct {
+	Chat string `json:"chat,omitempty" jsonschema:"Chat name from listChats; the default chat if empty"`
 	Text string `json:"text" jsonschema:"Message text"`
+}
+
+// chatInfo describes a chat in the listChats output.
+type chatInfo struct {
+	chat
+	Default bool `json:"default"`
+}
+
+// listChatsOut is the output of the listChats tool.
+type listChatsOut struct {
+	Chats []chatInfo `json:"chats"`
 }
 
 // registerTools registers all MCP tools of the server.
 func registerTools(srv *argon.Server, b *bot) {
 	argon.Tool(srv,
+		"listChats",
+		"List chats the bot can send messages to",
+		func(ctx context.Context, _ struct{}) (listChatsOut, error) {
+			out := listChatsOut{Chats: make([]chatInfo, len(b.chats))}
+			for i, c := range b.chats {
+				out.Chats[i] = chatInfo{chat: c, Default: i == 0}
+			}
+
+			return out, nil
+		},
+		argon.ReadOnly(),
+	)
+
+	argon.Tool(srv,
 		"sendMessage",
 		"Send message via Telegram bot",
 		func(ctx context.Context, in sendMessageIn) (string, error) {
-			req := sendMessageReq{ChatID: b.chatID, Text: in.Text}
+			chatID, err := b.chatID(in.Chat)
+			if err != nil {
+				return "", err
+			}
+
+			req := sendMessageReq{ChatID: chatID, Text: in.Text}
 			if _, err := b.send[struct{}](ctx, req); err != nil {
 				return "", fmt.Errorf("send message: %w", err)
 			}
