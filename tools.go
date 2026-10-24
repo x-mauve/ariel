@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 
 	"go.xchunk.org/argon"
@@ -19,6 +20,15 @@ type sendMessageIn struct {
 // sendMessageOut is the output of the sendMessage tool.
 type sendMessageOut struct {
 	MessageIDs []int64 `json:"message_ids" jsonschema:"IDs of the sent messages, one per part of a split text"`
+}
+
+// editMessageIn is the input schema of the editMessage tool.
+type editMessageIn struct {
+	Chat      string `json:"chat,omitempty" jsonschema:"Chat name from listChats; the default chat if empty"`
+	MessageID int64  `json:"message_id" jsonschema:"ID of the message to edit, as returned by sendMessage"`
+	Text      string `json:"text" jsonschema:"New message text, at most 4096 characters"`
+	ParseMode string `json:"parse_mode,omitempty" jsonschema:"Text formatting: MarkdownV2 or HTML; plain text if empty"`
+	Level     string `json:"level,omitempty" jsonschema:"Severity: info, warn or error; adds an emoji prefix"`
 }
 
 // chatInfo describes a chat in the listChats output.
@@ -103,6 +113,42 @@ func registerTools(srv *argon.Server, b *bot) {
 
 			return out, nil
 		},
+		argon.OpenWorld(),
+	)
+
+	argon.Tool(srv,
+		"editMessage",
+		"Replace the text of a sent message, e.g. to update a progress status",
+		func(ctx context.Context, in editMessageIn) (string, error) {
+			chatID, err := b.chatID(in.Chat)
+			if err != nil {
+				return "", err
+			}
+			if err := checkParseMode(in.ParseMode); err != nil {
+				return "", err
+			}
+			text, err := withLevel(in.Level, in.Text)
+			if err != nil {
+				return "", err
+			}
+			if n := utf16Len(text); n > maxTextLen {
+				return "", fmt.Errorf("text is %d characters long, the limit is %d", n, maxTextLen)
+			}
+
+			req := editMessageTextReq{
+				ChatID:    chatID,
+				MessageID: in.MessageID,
+				Text:      text,
+				ParseMode: in.ParseMode,
+			}
+			// The result is the edited message, which the tool does not need.
+			if _, err := b.send[json.RawMessage](ctx, req); err != nil {
+				return "", fmt.Errorf("edit message: %w", err)
+			}
+
+			return "Edited", nil
+		},
+		argon.Idempotent(),
 		argon.OpenWorld(),
 	)
 }

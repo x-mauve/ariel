@@ -224,6 +224,25 @@ func TestSplitText(t *testing.T) {
 	}
 }
 
+func TestEditMessage(t *testing.T) {
+	srv, api := newTestServer(t)
+
+	in := map[string]any{"chat": "team", "message_id": 7, "text": "done", "level": "info"}
+	if _, err := argontest.Call[string](t, srv, "editMessage", in); err != nil {
+		t.Fatal(err)
+	}
+
+	p := api.callsTo("editMessageText")[0].Params
+	if p["chat_id"] != -2.0 || p["message_id"] != 7.0 || p["text"] != "ℹ️ done" {
+		t.Errorf("got %v", p)
+	}
+
+	in["text"] = strings.Repeat("a", maxTextLen+1)
+	if _, err := argontest.Call[string](t, srv, "editMessage", in); err == nil {
+		t.Error("want error for text over the limit")
+	}
+}
+
 func TestSendMessageUnknownChat(t *testing.T) {
 	srv, _ := newTestServer(t)
 

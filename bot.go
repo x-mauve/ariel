@@ -120,6 +120,19 @@ func (sendMessageReq) Method() string {
 	return "sendMessage"
 }
 
+// editMessageTextReq is the payload of the Bot API editMessageText method.
+type editMessageTextReq struct {
+	ChatID    int64  `json:"chat_id"`
+	MessageID int64  `json:"message_id"`
+	Text      string `json:"text"`
+	ParseMode string `json:"parse_mode,omitempty"`
+}
+
+// Method returns the Bot API method name for the request.
+func (editMessageTextReq) Method() string {
+	return "editMessageText"
+}
+
 // getMeReq is the payload of the Bot API getMe method.
 type getMeReq struct{}
 
