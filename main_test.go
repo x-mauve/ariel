@@ -12,6 +12,7 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"time"
 
 	"go.xchunk.org/argon"
 	"go.xchunk.org/argon/argontest"
@@ -318,6 +319,53 @@ func TestSendDocumentContent(t *testing.T) {
 	both := map[string]any{"content": "report", "path": "x"}
 	if _, err := argontest.Call[sendDocumentOut](t, srv, "sendDocument", both); err == nil {
 		t.Error("want error when both path and content are set")
+	}
+}
+
+func TestSendMessageDelayed(t *testing.T) {
+	srv, api := newTestServer(t)
+
+	out, err := argontest.Call[sendMessageOut](t, srv, "sendMessage", map[string]any{"text": "later", "delay_seconds": 1})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if out.ScheduledAt == "" || len(out.MessageIDs) != 0 {
+		t.Errorf("got %+v, want a scheduled message", out)
+	}
+	if n := len(api.callsTo("sendMessage")); n != 0 {
+		t.Fatalf("sent %d messages before the delay", n)
+	}
+
+	deadline := time.Now().Add(5 * time.Second)
+	for len(api.callsTo("sendMessage")) == 0 {
+		if time.Now().After(deadline) {
+			t.Fatal("scheduled message was not sent")
+		}
+		time.Sleep(50 * time.Millisecond)
+	}
+}
+
+func TestSendTime(t *testing.T) {
+	now := time.Date(2026, 10, 24, 12, 0, 0, 0, time.UTC)
+
+	at, err := sendTime(sendMessageIn{At: "2026-10-24T18:00:00+05:00"}, now)
+	if err != nil || !at.Equal(now.Add(time.Hour)) {
+		t.Errorf("got %v, %v", at, err)
+	}
+	if at, err := sendTime(sendMessageIn{}, now); err != nil || !at.IsZero() {
+		t.Errorf("got %v, %v, want immediate send", at, err)
+	}
+
+	for _, in := range []sendMessageIn{
+		{Delay: 1, At: "2026-10-24T13:00:00Z"},
+		{Delay: -1},
+		{At: "tomorrow"},
+		{At: "2026-10-24T11:00:00Z"},
+		{Delay: int(maxDelay/time.Second) + 1},
+	} {
+		if _, err := sendTime(in, now); err == nil {
+			t.Errorf("sendTime(%+v): want error", in)
+		}
 	}
 }
 
