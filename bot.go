@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"sync"
 	"time"
 	"unicode/utf16"
 	"unicode/utf8"
@@ -24,6 +25,12 @@ type bot struct {
 	client *lithium.Client
 	// chats lists the known destinations; the first one is the default.
 	chats []chat
+
+	// pollMu serializes getUpdates calls, which the Bot API allows only one
+	// at a time. It guards offset.
+	pollMu sync.Mutex
+	// offset is the ID of the next update to fetch.
+	offset int64
 }
 
 // newBot creates a bot that talks to the Bot API with token and delivers
@@ -129,6 +136,8 @@ type sendMessageReq struct {
 	Text                string `json:"text"`
 	ParseMode           string `json:"parse_mode,omitempty"`
 	DisableNotification bool   `json:"disable_notification,omitempty"`
+
+	ReplyMarkup *inlineKeyboardMarkup `json:"reply_markup,omitempty"`
 }
 
 // Method returns the Bot API method name for the request.
@@ -196,7 +205,8 @@ func (getMeReq) Method() string {
 
 // user is the subset of the Bot API User object used by the server.
 type user struct {
-	Username string `json:"username"`
+	FirstName string `json:"first_name"`
+	Username  string `json:"username,omitempty"`
 }
 
 // check verifies the bot token by calling getMe and returns the bot username.
