@@ -143,6 +143,11 @@ func (b *bot) check(ctx context.Context) (string, error) {
 	return me.Username, nil
 }
 
+// message is the subset of the Bot API Message object used by the server.
+type message struct {
+	MessageID int64 `json:"message_id"`
+}
+
 // checkParseMode reports an error if mode is not a Bot API parse mode.
 // An empty mode sends the text as is.
 func checkParseMode(mode string) error {

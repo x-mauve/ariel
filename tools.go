@@ -16,6 +16,11 @@ type sendMessageIn struct {
 	Level     string `json:"level,omitempty" jsonschema:"Severity: info, warn or error; adds an emoji prefix"`
 }
 
+// sendMessageOut is the output of the sendMessage tool.
+type sendMessageOut struct {
+	MessageIDs []int64 `json:"message_ids" jsonschema:"IDs of the sent messages, one per part of a split text"`
+}
+
 // chatInfo describes a chat in the listChats output.
 type chatInfo struct {
 	chat
@@ -67,20 +72,21 @@ func registerTools(srv *argon.Server, b *bot) {
 	argon.Tool(srv,
 		"sendMessage",
 		"Send message via Telegram bot",
-		func(ctx context.Context, in sendMessageIn) (string, error) {
+		func(ctx context.Context, in sendMessageIn) (sendMessageOut, error) {
 			chatID, err := b.chatID(in.Chat)
 			if err != nil {
-				return "", err
+				return sendMessageOut{}, err
 			}
 			if err := checkParseMode(in.ParseMode); err != nil {
-				return "", err
+				return sendMessageOut{}, err
 			}
 			text, err := withLevel(in.Level, in.Text)
 			if err != nil {
-				return "", err
+				return sendMessageOut{}, err
 			}
 
 			chunks := splitText(text, maxTextLen)
+			var out sendMessageOut
 			for i, chunk := range chunks {
 				req := sendMessageReq{
 					ChatID:              chatID,
@@ -88,12 +94,14 @@ func registerTools(srv *argon.Server, b *bot) {
 					ParseMode:           in.ParseMode,
 					DisableNotification: in.Silent,
 				}
-				if _, err := b.send[struct{}](ctx, req); err != nil {
-					return "", fmt.Errorf("send message part %d of %d: %w", i+1, len(chunks), err)
+				msg, err := b.send[message](ctx, req)
+				if err != nil {
+					return out, fmt.Errorf("send message part %d of %d: %w", i+1, len(chunks), err)
 				}
+				out.MessageIDs = append(out.MessageIDs, msg.MessageID)
 			}
 
-			return fmt.Sprintf("Sent %d message(s)", len(chunks)), nil
+			return out, nil
 		},
 		argon.OpenWorld(),
 	)

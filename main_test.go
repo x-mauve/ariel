@@ -130,10 +130,10 @@ func TestListChats(t *testing.T) {
 func TestSendMessage(t *testing.T) {
 	srv, api := newTestServer(t)
 
-	if _, err := argontest.Call[string](t, srv, "sendMessage", map[string]any{"text": "hi"}); err != nil {
+	if _, err := argontest.Call[sendMessageOut](t, srv, "sendMessage", map[string]any{"text": "hi"}); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := argontest.Call[string](t, srv, "sendMessage", map[string]any{"chat": "team", "text": "yo"}); err != nil {
+	if _, err := argontest.Call[sendMessageOut](t, srv, "sendMessage", map[string]any{"chat": "team", "text": "yo"}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -150,7 +150,7 @@ func TestSendMessageFormatting(t *testing.T) {
 	srv, api := newTestServer(t)
 
 	in := map[string]any{"text": "*hi*", "parse_mode": "MarkdownV2", "silent": true}
-	if _, err := argontest.Call[string](t, srv, "sendMessage", in); err != nil {
+	if _, err := argontest.Call[sendMessageOut](t, srv, "sendMessage", in); err != nil {
 		t.Fatal(err)
 	}
 
@@ -160,7 +160,7 @@ func TestSendMessageFormatting(t *testing.T) {
 	}
 
 	in["parse_mode"] = "Markdown"
-	if _, err := argontest.Call[string](t, srv, "sendMessage", in); err == nil {
+	if _, err := argontest.Call[sendMessageOut](t, srv, "sendMessage", in); err == nil {
 		t.Error("want error for unsupported parse mode")
 	}
 }
@@ -169,7 +169,7 @@ func TestSendMessageLevel(t *testing.T) {
 	srv, api := newTestServer(t)
 
 	in := map[string]any{"text": "disk full", "level": "error"}
-	if _, err := argontest.Call[string](t, srv, "sendMessage", in); err != nil {
+	if _, err := argontest.Call[sendMessageOut](t, srv, "sendMessage", in); err != nil {
 		t.Fatal(err)
 	}
 	if got := api.callsTo("sendMessage")[0].Params["text"]; got != "🔴 disk full" {
@@ -177,7 +177,7 @@ func TestSendMessageLevel(t *testing.T) {
 	}
 
 	in["level"] = "fatal"
-	if _, err := argontest.Call[string](t, srv, "sendMessage", in); err == nil {
+	if _, err := argontest.Call[sendMessageOut](t, srv, "sendMessage", in); err == nil {
 		t.Error("want error for unsupported level")
 	}
 }
@@ -186,8 +186,12 @@ func TestSendMessageSplitsLongText(t *testing.T) {
 	srv, api := newTestServer(t)
 
 	text := strings.Repeat("a", 4000) + "\n" + strings.Repeat("b", 200)
-	if _, err := argontest.Call[string](t, srv, "sendMessage", map[string]any{"text": text}); err != nil {
+	out, err := argontest.Call[sendMessageOut](t, srv, "sendMessage", map[string]any{"text": text})
+	if err != nil {
 		t.Fatal(err)
+	}
+	if len(out.MessageIDs) != 2 || out.MessageIDs[0] == out.MessageIDs[1] {
+		t.Errorf("got message IDs %v, want two distinct", out.MessageIDs)
 	}
 
 	calls := api.callsTo("sendMessage")
@@ -223,7 +227,7 @@ func TestSplitText(t *testing.T) {
 func TestSendMessageUnknownChat(t *testing.T) {
 	srv, _ := newTestServer(t)
 
-	_, err := argontest.Call[string](t, srv, "sendMessage", map[string]any{"chat": "nope", "text": "hi"})
+	_, err := argontest.Call[sendMessageOut](t, srv, "sendMessage", map[string]any{"chat": "nope", "text": "hi"})
 	if err == nil || !strings.Contains(err.Error(), "unknown chat") {
 		t.Errorf("got %v, want unknown chat error", err)
 	}
@@ -239,7 +243,7 @@ func TestRetryFloodControl(t *testing.T) {
 		return ""
 	}
 
-	if _, err := argontest.Call[string](t, srv, "sendMessage", map[string]any{"text": "hi"}); err != nil {
+	if _, err := argontest.Call[sendMessageOut](t, srv, "sendMessage", map[string]any{"text": "hi"}); err != nil {
 		t.Fatal(err)
 	}
 	if n := len(api.callsTo("sendMessage")); n != 2 {
@@ -253,7 +257,7 @@ func TestNoRetryOnBadRequest(t *testing.T) {
 		return `{"ok":false,"error_code":400,"description":"Bad Request: chat not found"}`
 	}
 
-	if _, err := argontest.Call[string](t, srv, "sendMessage", map[string]any{"text": "hi"}); err == nil {
+	if _, err := argontest.Call[sendMessageOut](t, srv, "sendMessage", map[string]any{"text": "hi"}); err == nil {
 		t.Fatal("want error")
 	}
 	if n := len(api.callsTo("sendMessage")); n != 1 {
