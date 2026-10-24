@@ -165,6 +165,23 @@ func TestSendMessageFormatting(t *testing.T) {
 	}
 }
 
+func TestSendMessageLevel(t *testing.T) {
+	srv, api := newTestServer(t)
+
+	in := map[string]any{"text": "disk full", "level": "error"}
+	if _, err := argontest.Call[string](t, srv, "sendMessage", in); err != nil {
+		t.Fatal(err)
+	}
+	if got := api.callsTo("sendMessage")[0].Params["text"]; got != "🔴 disk full" {
+		t.Errorf("got %q", got)
+	}
+
+	in["level"] = "fatal"
+	if _, err := argontest.Call[string](t, srv, "sendMessage", in); err == nil {
+		t.Error("want error for unsupported level")
+	}
+}
+
 func TestSendMessageUnknownChat(t *testing.T) {
 	srv, _ := newTestServer(t)
 

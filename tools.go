@@ -13,6 +13,7 @@ type sendMessageIn struct {
 	Text      string `json:"text" jsonschema:"Message text"`
 	ParseMode string `json:"parse_mode,omitempty" jsonschema:"Text formatting: MarkdownV2 or HTML; plain text if empty"`
 	Silent    bool   `json:"silent,omitempty" jsonschema:"Deliver without sound, for non-urgent notifications"`
+	Level     string `json:"level,omitempty" jsonschema:"Severity: info, warn or error; adds an emoji prefix"`
 }
 
 // chatInfo describes a chat in the listChats output.
@@ -24,6 +25,27 @@ type chatInfo struct {
 // listChatsOut is the output of the listChats tool.
 type listChatsOut struct {
 	Chats []chatInfo `json:"chats"`
+}
+
+// levelPrefixes maps severity levels to the emoji prepended to the text.
+var levelPrefixes = map[string]string{
+	"info":  "ℹ️ ",
+	"warn":  "⚠️ ",
+	"error": "🔴 ",
+}
+
+// withLevel prepends the emoji of level to text. An empty level leaves text as is.
+func withLevel(level, text string) (string, error) {
+	if level == "" {
+		return text, nil
+	}
+
+	prefix, ok := levelPrefixes[level]
+	if !ok {
+		return "", fmt.Errorf("unsupported level %q, want info, warn or error", level)
+	}
+
+	return prefix + text, nil
 }
 
 // registerTools registers all MCP tools of the server.
@@ -53,10 +75,14 @@ func registerTools(srv *argon.Server, b *bot) {
 			if err := checkParseMode(in.ParseMode); err != nil {
 				return "", err
 			}
+			text, err := withLevel(in.Level, in.Text)
+			if err != nil {
+				return "", err
+			}
 
 			req := sendMessageReq{
 				ChatID:              chatID,
-				Text:                in.Text,
+				Text:                text,
 				ParseMode:           in.ParseMode,
 				DisableNotification: in.Silent,
 			}
