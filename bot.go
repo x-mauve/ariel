@@ -133,6 +133,17 @@ func (editMessageTextReq) Method() string {
 	return "editMessageText"
 }
 
+// deleteMessageReq is the payload of the Bot API deleteMessage method.
+type deleteMessageReq struct {
+	ChatID    int64 `json:"chat_id"`
+	MessageID int64 `json:"message_id"`
+}
+
+// Method returns the Bot API method name for the request.
+func (deleteMessageReq) Method() string {
+	return "deleteMessage"
+}
+
 // getMeReq is the payload of the Bot API getMe method.
 type getMeReq struct{}
 

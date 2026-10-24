@@ -31,6 +31,12 @@ type editMessageIn struct {
 	Level     string `json:"level,omitempty" jsonschema:"Severity: info, warn or error; adds an emoji prefix"`
 }
 
+// messageRefIn is the input schema of tools that act on a sent message.
+type messageRefIn struct {
+	Chat      string `json:"chat,omitempty" jsonschema:"Chat name from listChats; the default chat if empty"`
+	MessageID int64  `json:"message_id" jsonschema:"ID of the message, as returned by sendMessage"`
+}
+
 // chatInfo describes a chat in the listChats output.
 type chatInfo struct {
 	chat
@@ -149,6 +155,26 @@ func registerTools(srv *argon.Server, b *bot) {
 			return "Edited", nil
 		},
 		argon.Idempotent(),
+		argon.OpenWorld(),
+	)
+
+	argon.Tool(srv,
+		"deleteMessage",
+		"Delete a sent message, e.g. an outdated notification",
+		func(ctx context.Context, in messageRefIn) (string, error) {
+			chatID, err := b.chatID(in.Chat)
+			if err != nil {
+				return "", err
+			}
+
+			req := deleteMessageReq{ChatID: chatID, MessageID: in.MessageID}
+			if _, err := b.send[bool](ctx, req); err != nil {
+				return "", fmt.Errorf("delete message: %w", err)
+			}
+
+			return "Deleted", nil
+		},
+		argon.Destructive(),
 		argon.OpenWorld(),
 	)
 }

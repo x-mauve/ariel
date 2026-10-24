@@ -79,11 +79,19 @@ func (f *fakeAPI) serve(w http.ResponseWriter, r *http.Request) {
 	if reply != nil {
 		body = reply(c)
 	}
+	if body == "" && boolMethods[c.Method] {
+		body = `{"ok":true,"result":true}`
+	}
 	if body == "" {
 		body = fmt.Sprintf(`{"ok":true,"result":{"message_id":%d,"username":"test_bot"}}`, id)
 	}
 	w.Header().Set("Content-Type", "application/json")
 	io.WriteString(w, body)
+}
+
+// boolMethods are the Bot API methods whose result is true rather than an object.
+var boolMethods = map[string]bool{
+	"deleteMessage": true,
 }
 
 // callsTo returns the received calls of method.
@@ -240,6 +248,19 @@ func TestEditMessage(t *testing.T) {
 	in["text"] = strings.Repeat("a", maxTextLen+1)
 	if _, err := argontest.Call[string](t, srv, "editMessage", in); err == nil {
 		t.Error("want error for text over the limit")
+	}
+}
+
+func TestDeleteMessage(t *testing.T) {
+	srv, api := newTestServer(t)
+
+	if _, err := argontest.Call[string](t, srv, "deleteMessage", map[string]any{"message_id": 7}); err != nil {
+		t.Fatal(err)
+	}
+
+	p := api.callsTo("deleteMessage")[0].Params
+	if p["chat_id"] != 1.0 || p["message_id"] != 7.0 {
+		t.Errorf("got %v", p)
 	}
 }
 
