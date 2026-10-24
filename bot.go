@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net"
 	"time"
 
@@ -91,4 +92,27 @@ type sendMessageReq struct {
 // Method returns the Bot API method name for the request.
 func (sendMessageReq) Method() string {
 	return "sendMessage"
+}
+
+// getMeReq is the payload of the Bot API getMe method.
+type getMeReq struct{}
+
+// Method returns the Bot API method name for the request.
+func (getMeReq) Method() string {
+	return "getMe"
+}
+
+// user is the subset of the Bot API User object used by the server.
+type user struct {
+	Username string `json:"username"`
+}
+
+// check verifies the bot token by calling getMe and returns the bot username.
+func (b *bot) check(ctx context.Context) (string, error) {
+	me, err := b.send[user](ctx, getMeReq{})
+	if err != nil {
+		return "", fmt.Errorf("check bot token: %w", err)
+	}
+
+	return me.Username, nil
 }

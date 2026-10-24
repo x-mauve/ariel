@@ -8,13 +8,18 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"os"
 	"strconv"
+	"time"
 
 	"go.xchunk.org/argon"
 )
+
+// startupTimeout bounds the token check performed on startup.
+const startupTimeout = 30 * time.Second
 
 // config holds the settings loaded from the environment.
 type config struct {
@@ -43,8 +48,19 @@ func main() {
 		log.Fatalln(err)
 	}
 
+	b := newBot(cfg.token, cfg.chatID)
+
+	// Fail fast on a revoked or mistyped token instead of on the first tool call.
+	ctx, cancel := context.WithTimeout(context.Background(), startupTimeout)
+	name, err := b.check(ctx)
+	cancel()
+	if err != nil {
+		log.Fatalln(err)
+	}
+	log.Printf("authorized as @%s", name)
+
 	srv := argon.New("sender")
-	registerTools(srv, newBot(cfg.token, cfg.chatID))
+	registerTools(srv, b)
 
 	if err := srv.Run(); err != nil {
 		log.Fatalln(err)
