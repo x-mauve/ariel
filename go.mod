@@ -1,4 +1,4 @@
-module go.xchunk.org/argon-test
+module go.xchunk.org/ariel
 
 go 1.27.2
 

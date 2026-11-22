@@ -1,4 +1,4 @@
-# argontest
+# Ariel
 
 An MCP server that sends notifications to Telegram through a bot.
 

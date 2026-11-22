@@ -111,7 +111,7 @@ func main() {
 	}
 	log.Printf("authorized as @%s", name)
 
-	srv := argon.New("sender")
+	srv := argon.New("ariel")
 	registerTools(srv, b)
 
 	if err := srv.Run(); err != nil {
