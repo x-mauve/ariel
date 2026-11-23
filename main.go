@@ -20,6 +20,9 @@ import (
 	"time"
 
 	"go.xchunk.org/argon"
+
+	"go.xchunk.org/ariel/internal/telegram"
+	"go.xchunk.org/ariel/internal/tools"
 )
 
 // startupTimeout bounds the token check performed on startup.
@@ -28,7 +31,7 @@ const startupTimeout = 30 * time.Second
 // config holds the settings loaded from the environment.
 type config struct {
 	token string
-	chats []chat
+	chats []telegram.Chat
 }
 
 // loadConfig reads and validates the configuration from the environment.
@@ -58,8 +61,8 @@ func loadConfig() (config, error) {
 }
 
 // parseChats parses a comma-separated list of name:id pairs.
-func parseChats(s string) ([]chat, error) {
-	var chats []chat
+func parseChats(s string) ([]telegram.Chat, error) {
+	var chats []telegram.Chat
 	for entry := range strings.SplitSeq(s, ",") {
 		entry = strings.TrimSpace(entry)
 		if entry == "" {
@@ -76,7 +79,7 @@ func parseChats(s string) ([]chat, error) {
 		if err != nil {
 			return nil, fmt.Errorf("entry %q: %w", entry, err)
 		}
-		chats = append(chats, chat{Name: name, ID: id})
+		chats = append(chats, telegram.Chat{Name: name, ID: id})
 	}
 
 	return chats, nil
@@ -88,11 +91,11 @@ func main() {
 		log.Fatalln(err)
 	}
 
-	b := newBot(cfg.token, cfg.chats)
+	b := telegram.New(cfg.token, cfg.chats)
 
 	// Fail fast on a revoked or mistyped token instead of on the first tool call.
 	ctx, cancel := context.WithTimeout(context.Background(), startupTimeout)
-	name, err := b.check(ctx)
+	name, err := b.Check(ctx)
 	cancel()
 	if err != nil {
 		log.Fatalln(err)
@@ -100,7 +103,7 @@ func main() {
 	log.Printf("authorized as @%s", name)
 
 	srv := argon.New("ariel")
-	registerTools(srv, b)
+	tools.Register(srv, b)
 
 	if err := srv.Run(); err != nil {
 		log.Fatalln(err)
