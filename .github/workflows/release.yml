@@ -20,12 +20,12 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
         with:
           # GoReleaser derives the version and the previous tag from history.
           fetch-depth: 0
 
-      - uses: actions/setup-go@v6
+      - uses: actions/setup-go@v7
         with:
           go-version-file: go.mod
 
@@ -35,7 +35,7 @@ jobs:
 
       - name: Publish release
         if: github.ref_type == 'tag'
-        uses: goreleaser/goreleaser-action@v6
+        uses: goreleaser/goreleaser-action@v7
         with:
           version: '~> v2'
           args: release --clean --release-notes ${{ runner.temp }}/notes.md
@@ -44,14 +44,14 @@ jobs:
 
       - name: Build snapshot
         if: github.ref_type != 'tag'
-        uses: goreleaser/goreleaser-action@v6
+        uses: goreleaser/goreleaser-action@v7
         with:
           version: '~> v2'
           args: release --snapshot --clean
 
       - name: Upload snapshot
         if: github.ref_type != 'tag'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ariel-snapshot
           path: |
