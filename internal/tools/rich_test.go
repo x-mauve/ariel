@@ -6,6 +6,7 @@ import (
 
 	"go.xchunk.org/argon/argontest"
 
+	"go.xchunk.org/ariel/internal/fakeapi"
 	"go.xchunk.org/ariel/internal/telegram"
 )
 
@@ -88,5 +89,29 @@ func TestEditMessageRich(t *testing.T) {
 		if _, err := argontest.Call[string](t, srv, "editMessage", bad); err == nil {
 			t.Errorf("editMessage(%v): want error", bad)
 		}
+	}
+}
+
+func TestGuideResource(t *testing.T) {
+	srv, _ := newTestServer(t)
+
+	got, err := argontest.ReadResource(t, srv, guideURI)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(got.Text, "# Writing Telegram rich messages") {
+		t.Errorf("got %.80q, want the guide", got.Text)
+	}
+}
+
+func TestSendRichMessageMarkupHint(t *testing.T) {
+	srv, api := newTestServer(t)
+	api.Reply = func(fakeapi.Call) string {
+		return `{"ok":false,"error_code":400,"description":"Bad Request: can't parse rich message"}`
+	}
+
+	_, err := argontest.Call[sendRichMessageOut](t, srv, "sendRichMessage", map[string]any{"html": "<blink>x</blink>"})
+	if err == nil || !strings.Contains(err.Error(), guideURI) {
+		t.Errorf("got %v, want a pointer to the guide", err)
 	}
 }

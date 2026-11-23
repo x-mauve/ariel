@@ -45,3 +45,31 @@ func TestStripFences(t *testing.T) {
 		t.Errorf("got %q, want %q", got, want)
 	}
 }
+
+// TestGuideExamplesValid keeps the guide and the validator consistent: every
+// Markdown example in the guide must pass checkRich.
+func TestGuideExamplesValid(t *testing.T) {
+	examples := 0
+	for _, fence := range []string{"```", "~~~"} {
+		rest := guide
+		for {
+			start := strings.Index(rest, fence+"markdown\n")
+			if start < 0 {
+				break
+			}
+			rest = rest[start+len(fence+"markdown\n"):]
+			end := strings.Index(rest, "\n"+fence+"\n")
+			if end < 0 {
+				t.Fatalf("unterminated %smarkdown example", fence)
+			}
+			if err := checkRich("markdown", rest[:end]); err != nil {
+				t.Errorf("guide example %q: %v", rest[:min(end, 40)], err)
+			}
+			rest = rest[end:]
+			examples++
+		}
+	}
+	if examples < 5 {
+		t.Errorf("found %d examples, want at least 5", examples)
+	}
+}

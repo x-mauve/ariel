@@ -12,9 +12,10 @@ import (
 	"go.xchunk.org/ariel/internal/telegram"
 )
 
-// Register registers all MCP tools of the server on srv. The tools deliver
+// Register registers all MCP tools and resources of the server on srv. The tools deliver
 // messages through b.
 func Register(srv *argon.Server, b *telegram.Bot) {
+	registerGuide(srv)
 	registerListChats(srv, b)
 	registerSendRichMessage(srv, b)
 	registerSendMessage(srv, b)
@@ -149,8 +150,8 @@ func (in editMessageIn) request(chatID int64) (telegram.EditMessageText, error) 
 func registerEditMessage(srv *argon.Server, b *telegram.Bot) {
 	argon.Tool(srv,
 		"editMessage",
-		"Replace the content of a message sent by the bot. A rich message can be "+
-			"replaced with new rich content or with plain text",
+		"Replace the content of a message sent by the bot, e.g. to tick off progress. "+
+			"Rich content follows the "+guideURI+" resource",
 		func(ctx context.Context, in editMessageIn) (string, error) {
 			chatID, err := b.ChatID(in.Chat)
 			if err != nil {
@@ -163,6 +164,9 @@ func registerEditMessage(srv *argon.Server, b *telegram.Bot) {
 
 			// The result is the edited message, which the tool does not need.
 			if _, err := b.Send[json.RawMessage](ctx, req); err != nil {
+				if req.RichMessage != nil {
+					return "", withMarkupHint("edit message", err)
+				}
 				return "", fmt.Errorf("edit message: %w", err)
 			}
 

@@ -60,7 +60,8 @@ func registerSendRichMessage(srv *argon.Server, b *telegram.Bot) {
 		"sendRichMessage",
 		"Send a rich message via the Telegram bot: a formatted document with headings, "+
 			"tables, lists, quotes, code blocks, formulas and collapsible sections, "+
-			"up to 32768 characters in a single message",
+			"up to 32768 characters in a single message. Read the "+guideURI+" resource "+
+			"before the first call: it covers structure, syntax, limits and examples",
 		func(ctx context.Context, in sendRichMessageIn) (sendRichMessageOut, error) {
 			chatID, err := b.ChatID(in.Chat)
 			if err != nil {
@@ -79,7 +80,7 @@ func registerSendRichMessage(srv *argon.Server, b *telegram.Bot) {
 			}
 			msg, err := b.Send[telegram.Message](ctx, req)
 			if err != nil {
-				return sendRichMessageOut{}, fmt.Errorf("send rich message: %w", err)
+				return sendRichMessageOut{}, withMarkupHint("send rich message", err)
 			}
 
 			return sendRichMessageOut{MessageID: msg.MessageID}, nil
