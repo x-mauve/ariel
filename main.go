@@ -15,6 +15,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"runtime/debug"
 	"strconv"
 	"strings"
 	"time"
@@ -24,6 +25,23 @@ import (
 	"go.xchunk.org/ariel/internal/telegram"
 	"go.xchunk.org/ariel/internal/tools"
 )
+
+// version is the server version reported to MCP clients. Release builds set
+// it with -ldflags "-X main.version=..."; see serverVersion for other builds.
+var version = ""
+
+// serverVersion returns version if set, otherwise the module version recorded
+// by "go install module@version", otherwise "dev".
+func serverVersion() string {
+	if version != "" {
+		return version
+	}
+	if info, ok := debug.ReadBuildInfo(); ok && info.Main.Version != "" && info.Main.Version != "(devel)" {
+		return info.Main.Version
+	}
+
+	return "dev"
+}
 
 // startupTimeout bounds the token check performed on startup.
 const startupTimeout = 30 * time.Second
@@ -100,9 +118,9 @@ func main() {
 	if err != nil {
 		log.Fatalln(err)
 	}
-	log.Printf("authorized as @%s", name)
+	log.Printf("ariel %s authorized as @%s", serverVersion(), name)
 
-	srv := argon.New("ariel")
+	srv := argon.New("ariel", argon.Version(serverVersion()))
 	tools.Register(srv, b)
 
 	if err := srv.Run(); err != nil {
