@@ -93,8 +93,7 @@ func (f *fakeAPI) serve(w http.ResponseWriter, r *http.Request) {
 
 // boolMethods are the Bot API methods whose result is true rather than an object.
 var boolMethods = map[string]bool{
-	"deleteMessage":  true,
-	"pinChatMessage": true,
+	"deleteMessage": true,
 }
 
 // callsTo returns the received calls of method.
@@ -263,20 +262,6 @@ func TestDeleteMessage(t *testing.T) {
 
 	p := api.callsTo("deleteMessage")[0].Params
 	if p["chat_id"] != 1.0 || p["message_id"] != 7.0 {
-		t.Errorf("got %v", p)
-	}
-}
-
-func TestPinMessage(t *testing.T) {
-	srv, api := newTestServer(t)
-
-	in := map[string]any{"chat": "team", "message_id": 7, "silent": true}
-	if _, err := argontest.Call[string](t, srv, "pinMessage", in); err != nil {
-		t.Fatal(err)
-	}
-
-	p := api.callsTo("pinChatMessage")[0].Params
-	if p["chat_id"] != -2.0 || p["message_id"] != 7.0 || p["disable_notification"] != true {
 		t.Errorf("got %v", p)
 	}
 }

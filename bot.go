@@ -160,18 +160,6 @@ func (deleteMessageReq) Method() string {
 	return "deleteMessage"
 }
 
-// pinChatMessageReq is the payload of the Bot API pinChatMessage method.
-type pinChatMessageReq struct {
-	ChatID              int64 `json:"chat_id"`
-	MessageID           int64 `json:"message_id"`
-	DisableNotification bool  `json:"disable_notification,omitempty"`
-}
-
-// Method returns the Bot API method name for the request.
-func (pinChatMessageReq) Method() string {
-	return "pinChatMessage"
-}
-
 // sendDocumentReq is the payload of the Bot API sendDocument method. The
 // document itself is attached as a file.
 type sendDocumentReq struct {

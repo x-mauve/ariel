@@ -22,7 +22,6 @@ otherwise the first entry of `TELEGRAM_CHATS`. Every tool takes an optional
 | `sendMessage` | Send a message. Long text is split into several messages. |
 | `editMessage` | Replace the text of a sent message, e.g. "⏳ building…" → "✅ done". |
 | `deleteMessage` | Delete a sent message. |
-| `pinMessage` | Pin a sent message. |
 | `sendDocument` | Send a local file or text content as a document. |
 
 Text tools accept `parse_mode` (`MarkdownV2` or `HTML`), `silent` to deliver
