@@ -16,6 +16,7 @@ import (
 // messages through b.
 func Register(srv *argon.Server, b *telegram.Bot) {
 	registerListChats(srv, b)
+	registerSendRichMessage(srv, b)
 	registerSendMessage(srv, b)
 	registerEditMessage(srv, b)
 	registerDeleteMessage(srv, b)

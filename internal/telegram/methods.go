@@ -13,6 +13,28 @@ func (SendMessage) Method() string {
 	return "sendMessage"
 }
 
+// InputRichMessage is the Bot API InputRichMessage object: the content of a
+// rich message. Exactly one of Markdown and HTML must be set; the server never
+// sends the blocks form.
+type InputRichMessage struct {
+	Markdown            string `json:"markdown,omitempty"`
+	HTML                string `json:"html,omitempty"`
+	SkipEntityDetection bool   `json:"skip_entity_detection,omitempty"`
+}
+
+// SendRichMessage is the payload of the Bot API sendRichMessage method.
+type SendRichMessage struct {
+	ChatID              int64            `json:"chat_id"`
+	RichMessage         InputRichMessage `json:"rich_message"`
+	DisableNotification bool             `json:"disable_notification,omitempty"`
+	ProtectContent      bool             `json:"protect_content,omitempty"`
+}
+
+// Method returns the Bot API method name for the request.
+func (SendRichMessage) Method() string {
+	return "sendRichMessage"
+}
+
 // EditMessageText is the payload of the Bot API editMessageText method.
 type EditMessageText struct {
 	ChatID    int64  `json:"chat_id"`

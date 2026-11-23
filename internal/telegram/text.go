@@ -11,6 +11,10 @@ const (
 	MaxTextLen = 4096
 	// MaxCaptionLen is the Bot API limit on caption length, in UTF-16 code units.
 	MaxCaptionLen = 1024
+	// MaxRichTextLen is the Bot API limit on the text of a rich message, in
+	// Unicode characters. It includes custom emoji alternative text and the
+	// source of formulas.
+	MaxRichTextLen = 32768
 	// MaxUploadSize is the Bot API limit on the size of an uploaded file, in bytes.
 	MaxUploadSize = 50 << 20
 )
