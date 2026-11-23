@@ -1,4 +1,4 @@
-module go.xchunk.org/ariel
+module go.mauve.xchunk.org/ariel
 
 go 1.27.2
 

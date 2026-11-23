@@ -6,7 +6,7 @@ import (
 
 	"go.xchunk.org/argon"
 
-	"go.xchunk.org/ariel/internal/telegram"
+	"go.mauve.xchunk.org/ariel/internal/telegram"
 )
 
 // richContent is the part of a tool input that describes rich message content.

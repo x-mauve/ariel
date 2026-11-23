@@ -6,8 +6,8 @@ import (
 
 	"go.xchunk.org/argon/argontest"
 
-	"go.xchunk.org/ariel/internal/fakeapi"
-	"go.xchunk.org/ariel/internal/telegram"
+	"go.mauve.xchunk.org/ariel/internal/fakeapi"
+	"go.mauve.xchunk.org/ariel/internal/telegram"
 )
 
 func TestSendRichMessage(t *testing.T) {

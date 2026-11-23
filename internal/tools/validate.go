@@ -6,7 +6,7 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"go.xchunk.org/ariel/internal/telegram"
+	"go.mauve.xchunk.org/ariel/internal/telegram"
 )
 
 // maxTableColumns is the Bot API limit on the number of columns in a rich

@@ -3,7 +3,7 @@ package main
 import (
 	"testing"
 
-	"go.xchunk.org/ariel/internal/telegram"
+	"go.mauve.xchunk.org/ariel/internal/telegram"
 )
 
 func TestParseChats(t *testing.T) {

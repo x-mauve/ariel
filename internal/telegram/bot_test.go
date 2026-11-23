@@ -7,7 +7,7 @@ import (
 
 	"go.xchunk.org/lithium"
 
-	"go.xchunk.org/ariel/internal/fakeapi"
+	"go.mauve.xchunk.org/ariel/internal/fakeapi"
 )
 
 // testChats are the chats configured in tests; "default" is the default one.

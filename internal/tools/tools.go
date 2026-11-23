@@ -9,7 +9,7 @@ import (
 
 	"go.xchunk.org/argon"
 
-	"go.xchunk.org/ariel/internal/telegram"
+	"go.mauve.xchunk.org/ariel/internal/telegram"
 )
 
 // Register registers all MCP tools and resources of the server on srv. The tools deliver

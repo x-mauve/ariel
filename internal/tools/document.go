@@ -6,7 +6,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"go.xchunk.org/ariel/internal/telegram"
+	"go.mauve.xchunk.org/ariel/internal/telegram"
 )
 
 // documentFile returns the name and contents of the file described by in. It

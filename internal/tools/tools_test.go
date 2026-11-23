@@ -11,8 +11,8 @@ import (
 	"go.xchunk.org/argon/argontest"
 	"go.xchunk.org/lithium"
 
-	"go.xchunk.org/ariel/internal/fakeapi"
-	"go.xchunk.org/ariel/internal/telegram"
+	"go.mauve.xchunk.org/ariel/internal/fakeapi"
+	"go.mauve.xchunk.org/ariel/internal/telegram"
 )
 
 // testChats are the chats configured in tests; "default" is the default one.

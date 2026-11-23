@@ -22,8 +22,8 @@ import (
 
 	"go.xchunk.org/argon"
 
-	"go.xchunk.org/ariel/internal/telegram"
-	"go.xchunk.org/ariel/internal/tools"
+	"go.mauve.xchunk.org/ariel/internal/telegram"
+	"go.mauve.xchunk.org/ariel/internal/tools"
 )
 
 // version is the server version reported to MCP clients. Release builds set

@@ -14,7 +14,7 @@ Download an archive for your platform from the
 Go 1.27 or later:
 
 ```sh
-go install go.xchunk.org/ariel@latest
+go install go.mauve.xchunk.org/ariel@latest
 ```
 
 ## Configuration
