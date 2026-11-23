@@ -1,6 +1,6 @@
 # Ariel
 
-[![CI](https://github.com/x-chunk/ariel/actions/workflows/ci.yml/badge.svg?branch=master)](https://github.com/x-chunk/ariel/actions/workflows/ci.yml)
+[![CI](https://github.com/x-mauve/ariel/actions/workflows/ci.yml/badge.svg?branch=master)](https://github.com/x-mauve/ariel/actions/workflows/ci.yml)
 
 An MCP server that lets Claude and other MCP clients send Telegram
 [rich messages](https://core.telegram.org/bots/api#sendrichmessage) through a bot:
@@ -10,7 +10,7 @@ sections and buttons (Bot API 10.5). It speaks MCP over stdio.
 ## Installation
 
 Download an archive for your platform from the
-[releases](https://github.com/x-chunk/ariel/releases), or build from source with
+[releases](https://github.com/x-mauve/ariel/releases), or build from source with
 Go 1.27 or later:
 
 ```sh

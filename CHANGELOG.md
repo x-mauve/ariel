@@ -31,5 +31,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `askConfirmation`, `pinMessage`, delayed sending (`delay_seconds`, `at`) and severity
   levels (`level`).
 
-[Unreleased]: https://github.com/x-chunk/ariel/compare/v0.1.0...HEAD
-[0.1.0]: https://github.com/x-chunk/ariel/releases/tag/v0.1.0
+[Unreleased]: https://github.com/x-mauve/ariel/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/x-mauve/ariel/releases/tag/v0.1.0

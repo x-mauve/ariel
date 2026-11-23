@@ -22,5 +22,5 @@
   - New entries go under `## [Unreleased]` at the top.
   - Group entries under `### Added`, `### Changed`, `### Deprecated`, `### Removed`, `### Fixed` and `### Security`, in that order; omit empty groups.
   - Write entries for users of the server, not for its developers: describe the effect, not the implementation.
-  - Keep comparison links at the bottom of the file, e.g. `[0.2.0]: https://github.com/x-chunk/ariel/compare/v0.1.0...v0.2.0`.
+  - Keep comparison links at the bottom of the file, e.g. `[0.2.0]: https://github.com/x-mauve/ariel/compare/v0.1.0...v0.2.0`.
 - To cut a release, rename `[Unreleased]` to `[X.Y.Z] - YYYY-MM-DD`, add a fresh empty `[Unreleased]` section, update the links, commit, then tag `vX.Y.Z`. The release workflow publishes the matching changelog section as the release notes.
