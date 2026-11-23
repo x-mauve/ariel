@@ -18,7 +18,6 @@ type sendMessageIn struct {
 	Text      string `json:"text" jsonschema:"Message text; text over 4096 characters is split into several messages"`
 	ParseMode string `json:"parse_mode,omitempty" jsonschema:"Text formatting: MarkdownV2 or HTML; plain text if empty"`
 	Silent    bool   `json:"silent,omitempty" jsonschema:"Deliver without sound, for non-urgent notifications"`
-	Level     string `json:"level,omitempty" jsonschema:"Severity: info, warn or error; adds an emoji prefix"`
 }
 
 // sendMessageOut is the output of the sendMessage tool.
@@ -52,7 +51,6 @@ type editMessageIn struct {
 	MessageID int64  `json:"message_id" jsonschema:"ID of the message to edit, as returned by sendMessage"`
 	Text      string `json:"text" jsonschema:"New message text, at most 4096 characters"`
 	ParseMode string `json:"parse_mode,omitempty" jsonschema:"Text formatting: MarkdownV2 or HTML; plain text if empty"`
-	Level     string `json:"level,omitempty" jsonschema:"Severity: info, warn or error; adds an emoji prefix"`
 }
 
 // messageRefIn is the input schema of tools that act on a sent message.
@@ -70,7 +68,6 @@ type sendDocumentIn struct {
 	Caption   string `json:"caption,omitempty" jsonschema:"Caption under the file, at most 1024 characters"`
 	ParseMode string `json:"parse_mode,omitempty" jsonschema:"Caption formatting: MarkdownV2 or HTML; plain text if empty"`
 	Silent    bool   `json:"silent,omitempty" jsonschema:"Deliver without sound, for non-urgent notifications"`
-	Level     string `json:"level,omitempty" jsonschema:"Severity: info, warn or error; adds an emoji prefix to the caption"`
 }
 
 // sendDocumentOut is the output of the sendDocument tool.
@@ -121,27 +118,6 @@ type listChatsOut struct {
 	Chats []chatInfo `json:"chats"`
 }
 
-// levelPrefixes maps severity levels to the emoji prepended to the text.
-var levelPrefixes = map[string]string{
-	"info":  "ℹ️ ",
-	"warn":  "⚠️ ",
-	"error": "🔴 ",
-}
-
-// withLevel prepends the emoji of level to text. An empty level leaves text as is.
-func withLevel(level, text string) (string, error) {
-	if level == "" {
-		return text, nil
-	}
-
-	prefix, ok := levelPrefixes[level]
-	if !ok {
-		return "", fmt.Errorf("unsupported level %q, want info, warn or error", level)
-	}
-
-	return prefix + text, nil
-}
-
 // registerTools registers all MCP tools of the server.
 func registerTools(srv *argon.Server, b *bot) {
 	argon.Tool(srv,
@@ -169,10 +145,7 @@ func registerTools(srv *argon.Server, b *bot) {
 			if err := checkParseMode(in.ParseMode); err != nil {
 				return sendMessageOut{}, err
 			}
-			text, err := withLevel(in.Level, in.Text)
-			if err != nil {
-				return sendMessageOut{}, err
-			}
+			text := in.Text
 
 			chunks := splitText(text, maxTextLen)
 			ids, err := b.sendText(ctx, chatID, chunks, in.ParseMode, in.Silent)
@@ -192,10 +165,7 @@ func registerTools(srv *argon.Server, b *bot) {
 			if err := checkParseMode(in.ParseMode); err != nil {
 				return "", err
 			}
-			text, err := withLevel(in.Level, in.Text)
-			if err != nil {
-				return "", err
-			}
+			text := in.Text
 			if n := utf16Len(text); n > maxTextLen {
 				return "", fmt.Errorf("text is %d characters long, the limit is %d", n, maxTextLen)
 			}
@@ -248,10 +218,7 @@ func registerTools(srv *argon.Server, b *bot) {
 			if err := checkParseMode(in.ParseMode); err != nil {
 				return sendDocumentOut{}, err
 			}
-			caption, err := withLevel(in.Level, in.Caption)
-			if err != nil {
-				return sendDocumentOut{}, err
-			}
+			caption := in.Caption
 			if n := utf16Len(caption); n > maxCaptionLen {
 				return sendDocumentOut{}, fmt.Errorf("caption is %d characters long, the limit is %d", n, maxCaptionLen)
 			}

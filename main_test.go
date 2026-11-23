@@ -175,23 +175,6 @@ func TestSendMessageFormatting(t *testing.T) {
 	}
 }
 
-func TestSendMessageLevel(t *testing.T) {
-	srv, api := newTestServer(t)
-
-	in := map[string]any{"text": "disk full", "level": "error"}
-	if _, err := argontest.Call[sendMessageOut](t, srv, "sendMessage", in); err != nil {
-		t.Fatal(err)
-	}
-	if got := api.callsTo("sendMessage")[0].Params["text"]; got != "🔴 disk full" {
-		t.Errorf("got %q", got)
-	}
-
-	in["level"] = "fatal"
-	if _, err := argontest.Call[sendMessageOut](t, srv, "sendMessage", in); err == nil {
-		t.Error("want error for unsupported level")
-	}
-}
-
 func TestSendMessageSplitsLongText(t *testing.T) {
 	srv, api := newTestServer(t)
 
@@ -237,13 +220,13 @@ func TestSplitText(t *testing.T) {
 func TestEditMessage(t *testing.T) {
 	srv, api := newTestServer(t)
 
-	in := map[string]any{"chat": "team", "message_id": 7, "text": "done", "level": "info"}
+	in := map[string]any{"chat": "team", "message_id": 7, "text": "done"}
 	if _, err := argontest.Call[string](t, srv, "editMessage", in); err != nil {
 		t.Fatal(err)
 	}
 
 	p := api.callsTo("editMessageText")[0].Params
-	if p["chat_id"] != -2.0 || p["message_id"] != 7.0 || p["text"] != "ℹ️ done" {
+	if p["chat_id"] != -2.0 || p["message_id"] != 7.0 || p["text"] != "done" {
 		t.Errorf("got %v", p)
 	}
 
@@ -274,7 +257,7 @@ func TestSendDocument(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	in := map[string]any{"path": path, "caption": "build", "level": "warn", "silent": true}
+	in := map[string]any{"path": path, "caption": "build", "silent": true}
 	out, err := argontest.Call[sendDocumentOut](t, srv, "sendDocument", in)
 	if err != nil {
 		t.Fatal(err)
@@ -284,7 +267,7 @@ func TestSendDocument(t *testing.T) {
 	}
 
 	c := api.callsTo("sendDocument")[0]
-	if c.Files["document"] != "ok" || c.Params["caption"] != "⚠️ build" ||
+	if c.Files["document"] != "ok" || c.Params["caption"] != "build" ||
 		c.Params["chat_id"] != "1" || c.Params["disable_notification"] != "true" {
 		t.Errorf("got %+v", c)
 	}

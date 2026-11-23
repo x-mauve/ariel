@@ -24,8 +24,8 @@ otherwise the first entry of `TELEGRAM_CHATS`. Every tool takes an optional
 | `deleteMessage` | Delete a sent message. |
 | `sendDocument` | Send a local file or text content as a document. |
 
-Text tools accept `parse_mode` (`MarkdownV2` or `HTML`), `silent` to deliver
-without sound, and `level` (`info`, `warn`, `error`) to add an emoji prefix.
+Text tools accept `parse_mode` (`MarkdownV2` or `HTML`) and `silent` to
+deliver without sound.
 
 Bot API requests time out after 10 seconds and are retried on flood control,
 server and network errors.
