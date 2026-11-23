@@ -19,7 +19,7 @@ otherwise the first entry of `TELEGRAM_CHATS`. Every tool takes an optional
 | Tool | Description |
 |---|---|
 | `listChats` | List the configured chats. |
-| `sendMessage` | Send a message, now or later (`delay_seconds` or `at`). Long text is split into several messages. |
+| `sendMessage` | Send a message. Long text is split into several messages. |
 | `editMessage` | Replace the text of a sent message, e.g. "⏳ building…" → "✅ done". |
 | `deleteMessage` | Delete a sent message. |
 | `pinMessage` | Pin a sent message. |
@@ -33,5 +33,4 @@ server and network errors.
 
 ## Limitations
 
-- Scheduled messages are kept in memory and lost if the server restarts.
 - Splitting formatted text can break markup across messages.

@@ -5,7 +5,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
 	"os"
 	"path/filepath"
 	"time"
@@ -20,49 +19,11 @@ type sendMessageIn struct {
 	ParseMode string `json:"parse_mode,omitempty" jsonschema:"Text formatting: MarkdownV2 or HTML; plain text if empty"`
 	Silent    bool   `json:"silent,omitempty" jsonschema:"Deliver without sound, for non-urgent notifications"`
 	Level     string `json:"level,omitempty" jsonschema:"Severity: info, warn or error; adds an emoji prefix"`
-	Delay     int    `json:"delay_seconds,omitempty" jsonschema:"Send after this many seconds instead of now; set at most one of delay_seconds and at"`
-	At        string `json:"at,omitempty" jsonschema:"Send at this RFC 3339 time instead of now, e.g. 2026-10-24T18:00:00+05:00"`
 }
 
 // sendMessageOut is the output of the sendMessage tool.
 type sendMessageOut struct {
-	MessageIDs  []int64 `json:"message_ids" jsonschema:"IDs of the sent messages, one per part of a split text; empty for a scheduled message"`
-	ScheduledAt string  `json:"scheduled_at,omitempty" jsonschema:"When a scheduled message will be sent"`
-}
-
-// maxDelay is how far into the future a message can be scheduled.
-const maxDelay = 7 * 24 * time.Hour
-
-// sendTime returns the time the message described by in is due, or the zero
-// time to send it immediately.
-func sendTime(in sendMessageIn, now time.Time) (time.Time, error) {
-	if in.Delay != 0 && in.At != "" {
-		return time.Time{}, fmt.Errorf("set at most one of delay_seconds and at")
-	}
-
-	var at time.Time
-	switch {
-	case in.Delay < 0:
-		return time.Time{}, fmt.Errorf("delay_seconds must not be negative")
-	case in.Delay > 0:
-		at = now.Add(time.Duration(in.Delay) * time.Second)
-	case in.At != "":
-		var err error
-		if at, err = time.Parse(time.RFC3339, in.At); err != nil {
-			return time.Time{}, fmt.Errorf("invalid at: %w", err)
-		}
-		if !at.After(now) {
-			return time.Time{}, fmt.Errorf("at %s is in the past", in.At)
-		}
-	default:
-		return time.Time{}, nil
-	}
-
-	if at.Sub(now) > maxDelay {
-		return time.Time{}, fmt.Errorf("cannot schedule more than %s ahead", maxDelay)
-	}
-
-	return at, nil
+	MessageIDs []int64 `json:"message_ids" jsonschema:"IDs of the sent messages, one per part of a split text"`
 }
 
 // sendText sends chunks as consecutive messages and returns their IDs.
@@ -206,7 +167,7 @@ func registerTools(srv *argon.Server, b *bot) {
 
 	argon.Tool(srv,
 		"sendMessage",
-		"Send a message via the Telegram bot, now or at a later time. Scheduled messages are kept in memory and lost if the server restarts",
+		"Send a plain text message via the Telegram bot",
 		func(ctx context.Context, in sendMessageIn) (sendMessageOut, error) {
 			chatID, err := b.chatID(in.Chat)
 			if err != nil {
@@ -220,26 +181,9 @@ func registerTools(srv *argon.Server, b *bot) {
 				return sendMessageOut{}, err
 			}
 
-			at, err := sendTime(in, time.Now())
-			if err != nil {
-				return sendMessageOut{}, err
-			}
-
 			chunks := splitText(text, maxTextLen)
-			if at.IsZero() {
-				ids, err := b.sendText(ctx, chatID, chunks, in.ParseMode, in.Silent)
-				return sendMessageOut{MessageIDs: ids}, err
-			}
-
-			// The timer lives in memory only, so a scheduled message is lost
-			// if the server stops before it fires.
-			time.AfterFunc(time.Until(at), func() {
-				if _, err := b.sendText(context.Background(), chatID, chunks, in.ParseMode, in.Silent); err != nil {
-					log.Printf("send scheduled message: %v", err)
-				}
-			})
-
-			return sendMessageOut{MessageIDs: []int64{}, ScheduledAt: at.Format(time.RFC3339)}, nil
+			ids, err := b.sendText(ctx, chatID, chunks, in.ParseMode, in.Silent)
+			return sendMessageOut{MessageIDs: ids}, err
 		},
 		argon.OpenWorld(),
 	)
