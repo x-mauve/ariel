@@ -353,3 +353,23 @@ func TestCheck(t *testing.T) {
 		t.Errorf("got %q, %v", name, err)
 	}
 }
+
+func TestLoadConfig(t *testing.T) {
+	t.Setenv("TELEGRAM_BOT_TOKEN", "token")
+	t.Setenv("TELEGRAM_CHATS", "me:1,team:-2")
+
+	cfg, err := loadConfig()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(cfg.chats) != 2 || cfg.chats[0].Name != "me" {
+		t.Errorf("got %+v", cfg.chats)
+	}
+
+	for _, bad := range []string{"", "me:1,me:2"} {
+		t.Setenv("TELEGRAM_CHATS", bad)
+		if _, err := loadConfig(); err == nil {
+			t.Errorf("loadConfig with TELEGRAM_CHATS=%q: want error", bad)
+		}
+	}
+}

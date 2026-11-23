@@ -7,11 +7,10 @@ An MCP server that sends notifications to Telegram through a bot.
 | Variable | Description |
 |---|---|
 | `TELEGRAM_BOT_TOKEN` | Bot token issued by @BotFather. Checked with `getMe` on startup. |
-| `TELEGRAM_CHAT_ID` | ID of the default chat, registered as `default`. |
-| `TELEGRAM_CHATS` | Optional named chats, e.g. `me:123,team:-456`. |
+| `TELEGRAM_CHATS` | Named chats, e.g. `me:123,team:-456`. |
 
-At least one chat is required. The default chat is `TELEGRAM_CHAT_ID` if set,
-otherwise the first entry of `TELEGRAM_CHATS`. Every tool takes an optional
+At least one chat is required. The first entry of `TELEGRAM_CHATS` is the
+default chat. Every tool takes an optional
 `chat` name and uses the default chat without it.
 
 ## Tools

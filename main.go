@@ -1,14 +1,13 @@
-// Command argontest runs an MCP server that exposes tools for sending
-// notifications to a Telegram chat through a bot.
+// Command ariel runs an MCP server that exposes tools for sending messages to
+// Telegram chats through a bot.
 //
 // Configuration is read from the environment:
 //
 //	TELEGRAM_BOT_TOKEN  bot token issued by @BotFather
-//	TELEGRAM_CHAT_ID    ID of the default chat, registered as "default"
-//	TELEGRAM_CHATS      optional named chats, e.g. "me:123,team:-456"
+//	TELEGRAM_CHATS      named chats, e.g. "me:123,team:-456"
 //
-// At least one chat must be configured. The default chat is TELEGRAM_CHAT_ID
-// if set, otherwise the first entry of TELEGRAM_CHATS.
+// At least one chat must be configured. The first entry of TELEGRAM_CHATS is
+// the default chat.
 package main
 
 import (
@@ -39,23 +38,12 @@ func loadConfig() (config, error) {
 		return config{}, fmt.Errorf("TELEGRAM_BOT_TOKEN is not set")
 	}
 
-	var chats []chat
-	if v := os.Getenv("TELEGRAM_CHAT_ID"); v != "" {
-		id, err := strconv.ParseInt(v, 10, 64)
-		if err != nil {
-			return config{}, fmt.Errorf("invalid TELEGRAM_CHAT_ID: %w", err)
-		}
-		chats = append(chats, chat{Name: "default", ID: id})
-	}
-
-	named, err := parseChats(os.Getenv("TELEGRAM_CHATS"))
+	chats, err := parseChats(os.Getenv("TELEGRAM_CHATS"))
 	if err != nil {
 		return config{}, fmt.Errorf("invalid TELEGRAM_CHATS: %w", err)
 	}
-	chats = append(chats, named...)
-
 	if len(chats) == 0 {
-		return config{}, fmt.Errorf("neither TELEGRAM_CHAT_ID nor TELEGRAM_CHATS is set")
+		return config{}, fmt.Errorf("TELEGRAM_CHATS is not set")
 	}
 
 	seen := make(map[string]bool, len(chats))
