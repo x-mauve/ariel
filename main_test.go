@@ -94,9 +94,8 @@ func (f *fakeAPI) serve(w http.ResponseWriter, r *http.Request) {
 
 // boolMethods are the Bot API methods whose result is true rather than an object.
 var boolMethods = map[string]bool{
-	"answerCallbackQuery": true,
-	"deleteMessage":       true,
-	"pinChatMessage":      true,
+	"deleteMessage":  true,
+	"pinChatMessage": true,
 }
 
 // callsTo returns the received calls of method.
@@ -366,79 +365,6 @@ func TestSendTime(t *testing.T) {
 	} {
 		if _, err := sendTime(in, now); err == nil {
 			t.Errorf("sendTime(%+v): want error", in)
-		}
-	}
-}
-
-func TestAskConfirmation(t *testing.T) {
-	srv, api := newTestServer(t)
-	api.reply = func(c apiCall) string {
-		if c.Method != "getUpdates" {
-			return ""
-		}
-		// The question is the first call, so it gets message ID 101. The first
-		// update presses a button of some older message and must be ignored.
-		return `{"ok":true,"result":[
-			{"update_id":5,"callback_query":{"id":"old","from":{"first_name":"Ann"},
-				"message":{"message_id":50,"chat":{"id":1}},"data":"0"}},
-			{"update_id":6,"callback_query":{"id":"new","from":{"first_name":"Ann","username":"ann"},
-				"message":{"message_id":101,"chat":{"id":1}},"data":"1"}}
-		]}`
-	}
-
-	in := map[string]any{"question": "Deploy?", "options": []string{"Go", "Wait"}}
-	out, err := argontest.Call[askConfirmationOut](t, srv, "askConfirmation", in)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	want := askConfirmationOut{Answered: true, Choice: "Wait", Index: 1, User: "@ann"}
-	if out != want {
-		t.Errorf("got %+v, want %+v", out, want)
-	}
-
-	q := api.callsTo("sendMessage")[0].Params
-	if _, ok := q["reply_markup"]; !ok {
-		t.Error("question was sent without buttons")
-	}
-	if answers := api.callsTo("answerCallbackQuery"); len(answers) != 2 || answers[0].Params["text"] == nil {
-		t.Errorf("got callback answers %+v, want the old press answered as expired", answers)
-	}
-	if n := len(api.callsTo("editMessageReplyMarkup")); n != 1 {
-		t.Errorf("got %d keyboard removals, want 1", n)
-	}
-}
-
-func TestAskConfirmationTimeout(t *testing.T) {
-	srv, api := newTestServer(t)
-	api.reply = func(c apiCall) string {
-		if c.Method != "getUpdates" {
-			return ""
-		}
-		time.Sleep(100 * time.Millisecond)
-		return `{"ok":true,"result":[]}`
-	}
-
-	in := map[string]any{"question": "Deploy?", "timeout_seconds": 1}
-	out, err := argontest.Call[askConfirmationOut](t, srv, "askConfirmation", in)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if out.Answered || out.Index != -1 {
-		t.Errorf("got %+v, want no answer", out)
-	}
-	if n := len(api.callsTo("editMessageReplyMarkup")); n != 1 {
-		t.Errorf("got %d keyboard removals, want 1", n)
-	}
-}
-
-func TestConfirmOptions(t *testing.T) {
-	if got, err := confirmOptions(nil); err != nil || len(got) != 2 {
-		t.Errorf("got %v, %v, want Yes and No", got, err)
-	}
-	for _, bad := range [][]string{{"one"}, {"a", " "}, make([]string, 9)} {
-		if _, err := confirmOptions(bad); err == nil {
-			t.Errorf("confirmOptions(%q): want error", bad)
 		}
 	}
 }

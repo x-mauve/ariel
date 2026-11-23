@@ -24,7 +24,6 @@ otherwise the first entry of `TELEGRAM_CHATS`. Every tool takes an optional
 | `deleteMessage` | Delete a sent message. |
 | `pinMessage` | Pin a sent message. |
 | `sendDocument` | Send a local file or text content as a document. |
-| `askConfirmation` | Ask a question with buttons and wait for the answer. |
 
 Text tools accept `parse_mode` (`MarkdownV2` or `HTML`), `silent` to deliver
 without sound, and `level` (`info`, `warn`, `error`) to add an emoji prefix.
@@ -35,6 +34,4 @@ server and network errors.
 ## Limitations
 
 - Scheduled messages are kept in memory and lost if the server restarts.
-- `askConfirmation` uses `getUpdates`, so the bot must not have a webhook set,
-  and only one question is awaited at a time.
 - Splitting formatted text can break markup across messages.

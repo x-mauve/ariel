@@ -8,7 +8,6 @@ import (
 	"log"
 	"os"
 	"path/filepath"
-	"strings"
 	"time"
 
 	"go.xchunk.org/argon"
@@ -155,71 +154,6 @@ func documentFile(in sendDocumentIn) (string, []byte, error) {
 	}
 
 	return cmp.Or(in.Filename, filepath.Base(in.Path)), data, nil
-}
-
-// askConfirmationIn is the input schema of the askConfirmation tool.
-type askConfirmationIn struct {
-	Chat      string   `json:"chat,omitempty" jsonschema:"Chat name from listChats; the default chat if empty"`
-	Question  string   `json:"question" jsonschema:"Question to ask, at most 4096 characters"`
-	Options   []string `json:"options,omitempty" jsonschema:"Answer buttons, 2 to 8 of them; Yes and No if empty"`
-	Timeout   int      `json:"timeout_seconds,omitempty" jsonschema:"How long to wait for an answer, at most 3600 seconds; 300 if zero"`
-	ParseMode string   `json:"parse_mode,omitempty" jsonschema:"Question formatting: MarkdownV2 or HTML; plain text if empty"`
-	Level     string   `json:"level,omitempty" jsonschema:"Severity: info, warn or error; adds an emoji prefix"`
-}
-
-// askConfirmationOut is the output of the askConfirmation tool.
-type askConfirmationOut struct {
-	Answered bool   `json:"answered" jsonschema:"Whether a button was pressed before the timeout"`
-	Choice   string `json:"choice,omitempty" jsonschema:"Text of the pressed button"`
-	Index    int    `json:"index" jsonschema:"Position of the pressed button in options; -1 if not answered"`
-	User     string `json:"user,omitempty" jsonschema:"Who pressed the button"`
-}
-
-const (
-	// defaultConfirmTimeout is how long askConfirmation waits by default.
-	defaultConfirmTimeout = 5 * time.Minute
-	// maxConfirmTimeout is the longest wait askConfirmation accepts.
-	maxConfirmTimeout = time.Hour
-)
-
-// confirmOptions validates options, falling back to Yes and No when empty.
-func confirmOptions(options []string) ([]string, error) {
-	if len(options) == 0 {
-		return []string{"Yes", "No"}, nil
-	}
-	if len(options) < 2 || len(options) > 8 {
-		return nil, fmt.Errorf("got %d options, want 2 to 8", len(options))
-	}
-	for i, opt := range options {
-		if strings.TrimSpace(opt) == "" {
-			return nil, fmt.Errorf("option %d is empty", i+1)
-		}
-	}
-
-	return options, nil
-}
-
-// confirmTimeout converts the requested timeout in seconds to a duration,
-// using the default for zero.
-func confirmTimeout(seconds int) (time.Duration, error) {
-	d := time.Duration(seconds) * time.Second
-	switch {
-	case seconds == 0:
-		return defaultConfirmTimeout, nil
-	case seconds < 0 || d > maxConfirmTimeout:
-		return 0, fmt.Errorf("timeout_seconds must be between 1 and %d", int(maxConfirmTimeout/time.Second))
-	default:
-		return d, nil
-	}
-}
-
-// displayName returns how u is shown in the askConfirmation output.
-func displayName(u user) string {
-	if u.Username != "" {
-		return "@" + u.Username
-	}
-
-	return u.FirstName
 }
 
 // chatInfo describes a chat in the listChats output.
@@ -432,62 +366,4 @@ func registerTools(srv *argon.Server, b *bot) {
 		argon.ToolTimeout(5*time.Minute),
 	)
 
-	argon.Tool(srv,
-		"askConfirmation",
-		"Ask a question with answer buttons and wait until someone presses one or the timeout passes. "+
-			"Requires the bot to have no webhook set",
-		func(ctx context.Context, in askConfirmationIn) (askConfirmationOut, error) {
-			none := askConfirmationOut{Index: -1}
-
-			chatID, err := b.chatID(in.Chat)
-			if err != nil {
-				return none, err
-			}
-			if err := checkParseMode(in.ParseMode); err != nil {
-				return none, err
-			}
-			text, err := withLevel(in.Level, in.Question)
-			if err != nil {
-				return none, err
-			}
-			if n := utf16Len(text); n > maxTextLen {
-				return none, fmt.Errorf("question is %d characters long, the limit is %d", n, maxTextLen)
-			}
-			options, err := confirmOptions(in.Options)
-			if err != nil {
-				return none, err
-			}
-			timeout, err := confirmTimeout(in.Timeout)
-			if err != nil {
-				return none, err
-			}
-
-			req := sendMessageReq{
-				ChatID:      chatID,
-				Text:        text,
-				ParseMode:   in.ParseMode,
-				ReplyMarkup: keyboard(options),
-			}
-			msg, err := b.send[message](ctx, req)
-			if err != nil {
-				return none, fmt.Errorf("send question: %w", err)
-			}
-			defer b.removeKeyboard(chatID, msg.MessageID)
-
-			ans, ok, err := b.waitAnswer(ctx, chatID, msg.MessageID, len(options), time.Now().Add(timeout))
-			if err != nil || !ok {
-				return none, err
-			}
-
-			return askConfirmationOut{
-				Answered: true,
-				Choice:   options[ans.Index],
-				Index:    ans.Index,
-				User:     displayName(ans.User),
-			}, nil
-		},
-		argon.OpenWorld(),
-		// Waiting for a person takes longer than the default call limit.
-		argon.ToolTimeout(maxConfirmTimeout+time.Minute),
-	)
 }
