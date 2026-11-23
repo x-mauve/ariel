@@ -35,12 +35,14 @@ func (SendRichMessage) Method() string {
 	return "sendRichMessage"
 }
 
-// EditMessageText is the payload of the Bot API editMessageText method.
+// EditMessageText is the payload of the Bot API editMessageText method. Set
+// either Text, optionally with ParseMode, or RichMessage.
 type EditMessageText struct {
-	ChatID    int64  `json:"chat_id"`
-	MessageID int64  `json:"message_id"`
-	Text      string `json:"text"`
-	ParseMode string `json:"parse_mode,omitempty"`
+	ChatID      int64             `json:"chat_id"`
+	MessageID   int64             `json:"message_id"`
+	Text        string            `json:"text,omitempty"`
+	ParseMode   string            `json:"parse_mode,omitempty"`
+	RichMessage *InputRichMessage `json:"rich_message,omitempty"`
 }
 
 // Method returns the Bot API method name for the request.

@@ -109,33 +109,58 @@ func sendText(ctx context.Context, b *telegram.Bot, chatID int64, chunks []strin
 // editMessageIn is the input schema of the editMessage tool.
 type editMessageIn struct {
 	Chat      string `json:"chat,omitempty" jsonschema:"Chat name from listChats; the default chat if empty"`
-	MessageID int64  `json:"message_id" jsonschema:"ID of the message to edit, as returned by sendMessage"`
-	Text      string `json:"text" jsonschema:"New message text, at most 4096 characters"`
-	ParseMode string `json:"parse_mode,omitempty" jsonschema:"Text formatting: MarkdownV2 or HTML; plain text if empty"`
+	MessageID int64  `json:"message_id" jsonschema:"ID of the message to edit, as returned by the tool that sent it"`
+	richContent
+	Text      string `json:"text,omitempty" jsonschema:"New plain text, at most 4096 characters; set exactly one of markdown, html and text"`
+	ParseMode string `json:"parse_mode,omitempty" jsonschema:"Formatting of text: MarkdownV2 or HTML; plain text if empty"`
+}
+
+// request validates in and converts it to an editMessageText request for the
+// chat chatID.
+func (in editMessageIn) request(chatID int64) (telegram.EditMessageText, error) {
+	req := telegram.EditMessageText{ChatID: chatID, MessageID: in.MessageID}
+
+	if in.richContent.set() {
+		if in.Text != "" || in.ParseMode != "" {
+			return req, fmt.Errorf("set exactly one of markdown, html and text; parse_mode applies to text only")
+		}
+		rich, err := in.message()
+		if err != nil {
+			return req, err
+		}
+		req.RichMessage = &rich
+		return req, nil
+	}
+
+	if in.Text == "" {
+		return req, fmt.Errorf("set exactly one of markdown, html and text with the new content")
+	}
+	if err := telegram.CheckParseMode(in.ParseMode); err != nil {
+		return req, err
+	}
+	if n := telegram.UTF16Len(in.Text); n > telegram.MaxTextLen {
+		return req, fmt.Errorf("text is %d characters long, the limit is %d", n, telegram.MaxTextLen)
+	}
+	req.Text, req.ParseMode = in.Text, in.ParseMode
+
+	return req, nil
 }
 
 func registerEditMessage(srv *argon.Server, b *telegram.Bot) {
 	argon.Tool(srv,
 		"editMessage",
-		"Replace the text of a sent message",
+		"Replace the content of a message sent by the bot. A rich message can be "+
+			"replaced with new rich content or with plain text",
 		func(ctx context.Context, in editMessageIn) (string, error) {
 			chatID, err := b.ChatID(in.Chat)
 			if err != nil {
 				return "", err
 			}
-			if err := telegram.CheckParseMode(in.ParseMode); err != nil {
+			req, err := in.request(chatID)
+			if err != nil {
 				return "", err
 			}
-			if n := telegram.UTF16Len(in.Text); n > telegram.MaxTextLen {
-				return "", fmt.Errorf("text is %d characters long, the limit is %d", n, telegram.MaxTextLen)
-			}
 
-			req := telegram.EditMessageText{
-				ChatID:    chatID,
-				MessageID: in.MessageID,
-				Text:      in.Text,
-				ParseMode: in.ParseMode,
-			}
 			// The result is the edited message, which the tool does not need.
 			if _, err := b.Send[json.RawMessage](ctx, req); err != nil {
 				return "", fmt.Errorf("edit message: %w", err)

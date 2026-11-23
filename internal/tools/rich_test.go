@@ -65,3 +65,28 @@ func TestSendRichMessageInvalid(t *testing.T) {
 		t.Errorf("sent %d invalid messages", n)
 	}
 }
+
+func TestEditMessageRich(t *testing.T) {
+	srv, api := newTestServer(t)
+
+	in := map[string]any{"message_id": 7, "markdown": "## Done"}
+	if _, err := argontest.Call[string](t, srv, "editMessage", in); err != nil {
+		t.Fatal(err)
+	}
+
+	p := api.CallsTo("editMessageText")[0].Params
+	rich, _ := p["rich_message"].(map[string]any)
+	if p["message_id"] != 7.0 || p["text"] != nil || rich["markdown"] != "## Done" {
+		t.Errorf("got %v", p)
+	}
+
+	for _, bad := range []map[string]any{
+		{"message_id": 7},
+		{"message_id": 7, "markdown": "a", "text": "b"},
+		{"message_id": 7, "html": "a", "parse_mode": "HTML"},
+	} {
+		if _, err := argontest.Call[string](t, srv, "editMessage", bad); err == nil {
+			t.Errorf("editMessage(%v): want error", bad)
+		}
+	}
+}
